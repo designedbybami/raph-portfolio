@@ -1,0 +1,146 @@
+/* Structural/animation rules for StaggeredMenu (./staggered-menu.tsx).
+   Class names here are gsap querySelector targets — don't rename without updating the component. */
+
+.sm-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.sm-toggle:focus-visible {
+  outline: 2px solid #ffffffaa;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.sm-toggle-textWrap {
+  position: relative;
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sm-toggle-textInner {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.sm-toggle-line {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+.sm-icon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+
+.sm-icon-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+/* Portaled to <body> and stacked above GradualBlur's page-mode portal
+   (zIndex 1000 + 100, see shared/ui/gradual-blur.tsx), so an open menu is
+   never blurred over by it. Below the custom cursor's z-[9999]. */
+.sm-prelayers {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1150;
+  opacity: 0;
+}
+
+.sm-prelayer {
+  position: absolute;
+  inset: 0;
+  transform: translateX(0);
+  opacity: 0;
+}
+
+/* Never intercepts while closed: it stays mounted and only transforms off-screen, so
+   without this any hiccup in the open/close animation leaves it swallowing clicks. */
+.sm-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(100vw, 420px);
+  height: 100dvh;
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-open] .sm-panel {
+  pointer-events: auto;
+}
+
+.sm-panel[data-position="left"] {
+  right: auto;
+  left: 0;
+}
+
+.sm-panel-itemWrap {
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.sm-panel-itemLabel {
+  display: inline-block;
+  will-change: transform;
+  transform-origin: 50% 100%;
+}
+
+.sm-panel-list[data-numbering] {
+  counter-reset: smItem;
+}
+
+.sm-panel-list[data-numbering] .sm-panel-item::after {
+  counter-increment: smItem;
+  content: counter(smItem, decimal-leading-zero);
+  position: absolute;
+  top: 0.2em;
+  right: 0;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--sm-accent, #facc15);
+  pointer-events: none;
+  user-select: none;
+  opacity: var(--sm-num-opacity, 0);
+}
+
+.sm-socials-link {
+  transition:
+    color 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.sm-socials-list:hover .sm-socials-link:not(:hover) {
+  opacity: 0.35;
+}
+
+.sm-socials-list:focus-within .sm-socials-link:not(:focus-visible) {
+  opacity: 0.35;
+}
