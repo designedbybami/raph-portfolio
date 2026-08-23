@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# the template carries no values, and it is the only record of what to set
+!.env.example
 
 # vercel
 .vercel
@@ -46,3 +48,6 @@ AGENTS.md
 # skill caches, regenerated from skills-lock.json (same relationship as node_modules to package-lock.json)
 /.agents/
 /.claude/
+
+# its own repo, deployed separately; staging it here would record a bare gitlink
+/studio/
