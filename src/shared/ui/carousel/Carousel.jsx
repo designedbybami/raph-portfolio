@@ -40,7 +40,12 @@ const blankTexture = () => {
 };
 
 // projects is in ring order. Pass a stable reference: this mounts a whole Three.js scene and does not expect the list's identity to change.
-export default function Carousel({ projects, heading, hrefBase }) {
+export default function Carousel({
+  projects,
+  heading,
+  hrefBase,
+  onEntryComplete,
+}) {
   const router = useRouter();
   const containerRef = useRef(null);
   const listRef = useRef(null);
@@ -59,10 +64,12 @@ export default function Carousel({ projects, heading, hrefBase }) {
   const setCursorOverrideRef = useRef(null);
   const hrefBaseRef = useRef(hrefBase);
   const routerRef = useRef(router);
+  const onEntryCompleteRef = useRef(onEntryComplete);
   useInsertionEffect(() => {
     setCursorOverrideRef.current = cursor?.setOverride ?? null;
     hrefBaseRef.current = hrefBase;
     routerRef.current = router;
+    onEntryCompleteRef.current = onEntryComplete;
   });
 
   useEffect(() => {
@@ -251,8 +258,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
       textGroup.scale.set(k, k, 1);
     };
 
-    const styleMeta = () =>
-      meta.style({ textK, tight: tightNow, viewW: viewW });
+    const styleMeta = () => meta.style({ textK, tight: tightNow });
 
     const resize = () => {
       viewW = container.clientWidth;
@@ -474,11 +480,37 @@ export default function Carousel({ projects, heading, hrefBase }) {
       pick(planeIndex);
     };
 
+    const hitPlaneAtPointer = () => {
+      const count = Math.round(params.count);
+      for (let i = count - 1; i >= 0; i--) {
+        const pos = uniforms.uPos.value[i];
+        const scale = uniforms.uScale.value[i];
+        if (!pos || !scale || scale.x <= 0 || scale.y <= 0) continue;
+
+        const qx = pointer.x - pos.x;
+        const qy = pointer.y - pos.y;
+        const rot = uniforms.uRot.value[i];
+        const cr = Math.cos(rot);
+        const sr = Math.sin(rot);
+        const localX = qx * cr + qy * sr;
+        const localY = -qx * sr + qy * cr;
+        if (
+          Math.abs(localX) <= uniforms.uSize.value.x * 0.5 * scale.x &&
+          Math.abs(localY) <= uniforms.uSize.value.y * 0.5 * scale.y
+        ) {
+          return i;
+        }
+      }
+      return -1;
+    };
+
     // A drag ends in a click too, so only a near-stationary press counts.
     const onClick = () => {
-      if (!interactive || pointerTravel >= 5 || over < 0) return;
-      const cell = Math.round(uniforms.uScale.value[over]?.w ?? -1);
-      openProject(cell, over);
+      if (!interactive || pointerTravel >= params.touchSlop) return;
+      const hit = hitPlaneAtPointer();
+      if (hit < 0) return;
+      const cell = Math.round(uniforms.uScale.value[hit]?.w ?? -1);
+      openProject(cell, hit);
     };
 
     container.addEventListener("wheel", onWheel, { passive: false });
@@ -794,8 +826,8 @@ export default function Carousel({ projects, heading, hrefBase }) {
           const cr = Math.cos(rot);
           const sr = Math.sin(rot);
           if (
-            Math.abs(qx * cr + qy * sr) <= W * 0.5 * sx * sw &&
-            Math.abs(-qx * sr + qy * cr) <= H * 0.5 * sy * sw
+            Math.abs(qx * cr + qy * sr) <= H * 0.5 * sx * sw &&
+            Math.abs(-qx * sr + qy * cr) <= W * 0.5 * sy * sw
           ) {
             overI = i;
           }
@@ -813,33 +845,18 @@ export default function Carousel({ projects, heading, hrefBase }) {
       }
 
       over = overI;
-      // Mouse uses the global cursor. Direct pointers use the in-canvas tag
-      // below because touch has no cursor and iPadOS does not consistently
-      // advertise Pencil as a hover-capable fine pointer.
-      const wantTag =
+      // Pencil and mouse use the shared white CTA. A held finger has no cursor,
+      // so it keeps the in-canvas tag as direct feedback.
+      const wantCursorCta =
         over >= 0 &&
         !coarse &&
-        pointerKind !== "pen" &&
-        viewW > params.tagFrom;
-      // Touch has no cursor, while iPadOS does not consistently advertise
-      // Pencil as a hover-capable fine pointer. Reuse the in-canvas tag beside
-      // the contact point: after the deliberate touch hold, or while a pen is
-      // hovering. Mouse keeps the global custom cursor instead.
-      const wantCanvasTag =
-        over >= 0 && ((coarse && held) || pointerKind === "pen");
+        (pointerKind === "pen" || viewW > params.tagFrom);
+      const wantCanvasTag = over >= 0 && coarse && held;
       if (wantCanvasTag !== canvasTagUp) {
         canvasTagUp = wantCanvasTag;
         tag.show(wantCanvasTag);
       }
-      // On hover-capable pen devices the global cursor is otherwise still a
-      // visible dot beside the canvas tag. Let exactly one cue own the pointer.
-      setCursorOverrideRef.current?.(
-        wantCanvasTag && pointerKind === "pen"
-          ? "hidden"
-          : wantTag
-            ? "cta"
-            : null,
-      );
+      setCursorOverrideRef.current?.(wantCursorCta ? "cta" : null);
       // Off the resting centre, so a card being pushed cannot chase its own shadow next frame.
       if (over >= 0) focusPos.copy(rest[over]);
 
@@ -969,6 +986,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
         // No leading pause: the nav bar's shrink-to-a-dot (Scene 1, see nav-handoff.tsx) already covers the beat before something new appears, and the seed should pick that dot straight up.
         onComplete: () => {
           interactive = true;
+          onEntryCompleteRef.current?.();
         },
       });
 
@@ -1258,7 +1276,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
       {/* touch-none, or the browser claims the gesture for panning and the
           pointermove stream dies mid-drag. Nothing here scrolls, the swipe
           is the carousel. */}
-      <div ref={containerRef} className="fixed inset-0 touch-none" />
+      <div ref={containerRef} className="fixed inset-0 z-10 touch-none" />
 
       {/* The canvas underneath still owns the wheel and the drag, so only the
           items themselves take the pointer, leaving the column's whitespace

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useState } from "react";
+
 import Carousel from "./Carousel";
 
 interface CarouselProject {
@@ -21,19 +23,49 @@ export function CarouselWithHandoff({
   // Omit to just spin the ring on click instead of opening `${hrefBase}/${slug}`.
   hrefBase?: string;
 }) {
+  const [entryComplete, setEntryComplete] = useState(false);
+  const showGuidance = useCallback(() => setEntryComplete(true), []);
+
+  const guidanceWord = (word: string, index: number) => (
+    <span
+      key={`${word}-${index}`}
+      className="inline-block motion-reduce:!translate-y-0 motion-reduce:!transition-none"
+      style={{
+        opacity: entryComplete ? 1 : 0,
+        transform: `translateY(${entryComplete ? 0 : 10}px)`,
+        transition:
+          "opacity 420ms cubic-bezier(0.25, 1, 0.5, 1), transform 420ms cubic-bezier(0.25, 1, 0.5, 1)",
+        transitionDelay: entryComplete ? `${index * 45}ms` : "0ms",
+      }}
+    >
+      {word}
+    </span>
+  );
+
   return (
     <>
-      <Carousel projects={projects} heading={heading} hrefBase={hrefBase} />
+      <Carousel
+        projects={projects}
+        heading={heading}
+        hrefBase={hrefBase}
+        onEntryComplete={showGuidance}
+      />
 
-      {/* The WebGL ring has no DOM per-card, so unlike artwork-slot.tsx's per-card
-          badge, this is one shared hint standing in for the cursor's "Open Project"
-          cue, which never renders on a coarse pointer. */}
-      <span className="pointer-events-none absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm pointer-coarse:flex">
-        Tap a piece to open
-        <svg aria-hidden viewBox="0 0 24 24" fill="none" className="h-3 w-3">
-          <path d="M7 17 17 7M8 7h9v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
+      <div
+        aria-hidden={!entryComplete}
+        className="pointer-events-none absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 flex-col items-center gap-1 text-center text-xs text-white pointer-coarse:flex lg:hidden"
+      >
+        <span className="flex gap-[0.28em] whitespace-nowrap">
+          {"Swipe up or down to browse"
+            .split(" ")
+            .map((word, index) => guidanceWord(word, index))}
+        </span>
+        <span className="flex gap-[0.28em] whitespace-nowrap sm:hidden">
+          {"Tap to view"
+            .split(" ")
+            .map((word, index) => guidanceWord(word, index + 7))}
+        </span>
+      </div>
     </>
   );
 }
