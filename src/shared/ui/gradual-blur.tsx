@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { useHydrated } from "@/shared/lib/use-hydrated";
 
 export type GradualBlurPosition = "top" | "bottom" | "left" | "right";
 export type GradualBlurCurve = "linear" | "bezier" | "ease-in" | "ease-out" | "ease-in-out";
@@ -91,11 +92,9 @@ function useNearestScrollParent(sentinelRef: React.RefObject<HTMLSpanElement | n
 // Eases opacity down as the scroll container nears the edge this is anchored to.
 function useEndFade(scrollParent: HTMLElement | null, enabled: boolean, position: GradualBlurPosition, fadeZonePx: number) {
   const [fade, setFade] = useState(1);
+  const active = enabled && (position === "top" || position === "bottom");
   useEffect(() => {
-    if (!enabled || (position !== "top" && position !== "bottom")) {
-      setFade(1);
-      return;
-    }
+    if (!active) return;
     const target: HTMLElement | (Window & typeof globalThis) = scrollParent ?? window;
     const read = () => {
       const scrollTop = scrollParent ? scrollParent.scrollTop : window.scrollY;
@@ -111,8 +110,8 @@ function useEndFade(scrollParent: HTMLElement | null, enabled: boolean, position
       target.removeEventListener("scroll", read);
       window.removeEventListener("resize", read);
     };
-  }, [scrollParent, enabled, position, fadeZonePx]);
-  return fade;
+  }, [scrollParent, active, position, fadeZonePx]);
+  return active ? fade : 1;
 }
 
 // Ported from React Bits' GradualBlur (reactbits.dev), plus reduced-motion and an end-of-scroll fade-out.
@@ -144,8 +143,7 @@ export function GradualBlur({
   const isVertical = position === "top" || position === "bottom";
 
   // Portals to body: an ancestor's transform would hijack position:fixed.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   const scrollParent = useNearestScrollParent(sentinelRef, isPage);
   const endFade = useEndFade(scrollParent, isPage, position, toPx(height));

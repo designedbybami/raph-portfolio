@@ -2,8 +2,9 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useHydrated } from "@/shared/lib/use-hydrated";
 
 export interface NavHandoffSnapshot {
   src: string;
@@ -48,8 +49,7 @@ export function NavHandoffProvider({ children }: { children: ReactNode }) {
   const [shrinking, setShrinking] = useState<Shrinking | null>(null);
   const active = shrinking?.fromPath === pathname ? shrinking : null;
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   const registry = useMemo<NavHandoffRegistry>(
     () => ({
