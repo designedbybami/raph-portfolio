@@ -4,6 +4,7 @@ import { WorkDetailPage } from "@/features/work/components/work-detail-page";
 import { fetchWork, fetchWorkNeighbours, fetchWorkSlugs } from "@/features/work/data/fetch";
 import { urlFor } from "@/sanity/lib/image";
 import { AUTHOR_NAME, SITE_URL } from "@/shared/lib/site-config";
+import { pageMetadata } from "@/shared/lib/page-metadata";
 
 const TYPE = "brandDesign";
 const BASE_PATH = "/brand-designs";
@@ -20,19 +21,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const description = work.shortDescription ?? `${work.title}, brand design by ${AUTHOR_NAME}.`;
 
-  return {
+  return pageMetadata({
     title: work.title,
+    ogTitle: `${work.title} — Brand Design by ${AUTHOR_NAME}`,
     description,
-    alternates: { canonical: `${BASE_PATH}/${work.slug}` },
-    openGraph: {
-      type: "article",
-      title: work.title,
-      description,
-      images: work.image?.asset
-        ? [urlFor(work.image).width(1200).height(630).fit("crop").auto("format").url()]
-        : [],
-    },
-  };
+    path: `${BASE_PATH}/${work.slug}`,
+    type: "article",
+    images: work.image?.asset
+      ? [urlFor(work.image).width(1200).height(630).fit("crop").auto("format").url()]
+      : undefined,
+  });
 }
 
 export default async function BrandDesignDetail({ params }: { params: Promise<{ slug: string }> }) {

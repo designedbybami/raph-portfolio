@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { HomePage } from "@/features/home/components/home-page";
 import { client } from "@/sanity/client";
 import { urlFor } from "@/sanity/lib/image";
+import { pageMetadata } from "@/shared/lib/page-metadata";
 import {
   WORK_LIST_QUERY,
   hasImage,
@@ -11,12 +12,13 @@ import {
 
 const description = "Brand identities, artwork, and merch from Àlabí Raphael, a Lagos-based brand designer and art director.";
 
-export const metadata: Metadata = {
-  title: "Home",
+// A route's own title.template never applies to a title set in that same segment's
+// page.tsx, only to nested children, so this needs to be complete on its own.
+export const metadata: Metadata = pageMetadata({
+  title: "Àlabí Raphael, Brand Designer & Art Director",
   description,
-  alternates: { canonical: "/" },
-  openGraph: { title: "Raph Portfolio", description },
-};
+  path: "/",
+});
 
 const options = { next: { revalidate: 60 } };
 

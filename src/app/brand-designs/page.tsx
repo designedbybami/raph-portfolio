@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { WorkIndexPage } from "@/features/work/components/work-index-page";
 import { AUTHOR_NAME } from "@/shared/lib/site-config";
+import { pageMetadata } from "@/shared/lib/page-metadata";
 
 const description = "Selected brand identity and visual design work by Àlabí Raphael.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Brand Designs",
+  ogTitle: `Brand design work by ${AUTHOR_NAME}`,
   description,
-  alternates: { canonical: "/brand-designs" },
-  openGraph: { title: "Brand Designs", description },
-};
+  path: "/brand-designs",
+});
 
 export default function BrandDesigns() {
   return (
