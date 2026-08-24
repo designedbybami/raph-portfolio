@@ -131,6 +131,9 @@ export function defaultParams(projectCount) {
 
     // The morph between one card's words and the next.
     nameMorphTime: 1.2,
+    nameSimpleTime: 0.4, // Apple touch fallback: transform + opacity only
+    nameSimpleEase: "circ.inOut",
+    nameSimpleScale: 0.2, // Matches OriginKit's 0.8 -> 1 -> 1.2 motion
     nameEase: "circ.out",
     nameBlur: 8.5, // px the outgoing word smears to before it lets go
     nameEdge: 400, // alpha gain, how abruptly the threshold sets

@@ -33,7 +33,16 @@ function fade(el, f, blur) {
   }
 }
 
-function createGroup(side, groups, params) {
+// OriginKit's scale direction, minus the blur and SVG threshold that can push
+// Safari into software rendering while the WebGL ring is running.
+function safeMorph(el, opacity, scale) {
+  if (!el) return;
+  el.style.filter = "none";
+  el.style.opacity = `${opacity}`;
+  el.style.transform = `scale(${scale})`;
+}
+
+function createGroup(side, groups, params, simpleMorph, reduceMotion) {
   const m = { t: 1 };
   // Rewritten every change rather than trading places, since a word can move between the filtered rows and the steady one and leave a stale row behind.
   let prev = ["", ""];
@@ -49,8 +58,17 @@ function createGroup(side, groups, params) {
 
     for (let j = 0; j < SLOTS; j++) {
       if (moving[j]) {
-        fade(out?.[j], 1 - t, params.nameBlur);
-        fade(into?.[j], t, params.nameBlur);
+        if (simpleMorph) {
+          safeMorph(out?.[j], 1 - t, 1 + params.nameSimpleScale * t);
+          safeMorph(
+            into?.[j],
+            t,
+            1 - params.nameSimpleScale * (1 - t),
+          );
+        } else {
+          fade(out?.[j], 1 - t, params.nameBlur);
+          fade(into?.[j], t, params.nameBlur);
+        }
         if (held?.[j]) held[j].style.opacity = "0";
       } else {
         if (out?.[j]) out[j].style.opacity = "0";
@@ -62,7 +80,9 @@ function createGroup(side, groups, params) {
     // Off at rest: the threshold hardens glyph edges at this size.
     if (g.goo) {
       g.goo.style.filter =
-        t >= 1 ? "none" : `url(#name-goo) blur(${params.nameSoften}px)`;
+        simpleMorph || t >= 1
+          ? "none"
+          : `url(#name-goo) blur(${params.nameSoften}px)`;
     }
   };
 
@@ -98,13 +118,29 @@ function createGroup(side, groups, params) {
 
     m.t = 0;
     draw();
+    if (reduceMotion) {
+      m.t = 1;
+      draw();
+      return;
+    }
     gsap.to(m, {
       t: 1,
-      duration: params.nameMorphTime,
-      ease: params.nameEase,
+      duration: simpleMorph ? params.nameSimpleTime : params.nameMorphTime,
+      ease: simpleMorph ? params.nameSimpleEase : params.nameEase,
       onUpdate: draw,
     });
   };
+
+  if (simpleMorph) {
+    const g = groups[side];
+    if (g?.goo) g.goo.style.willChange = "auto";
+    for (const layer of g?.layers ?? []) {
+      for (const slot of slotsOf(layer) ?? []) {
+        slot.style.transformOrigin = "center";
+        slot.style.willChange = reduceMotion ? "auto" : "opacity, transform";
+      }
+    }
+  }
 
   return { m, set };
 }
@@ -114,10 +150,27 @@ function createGroup(side, groups, params) {
  * populates, one entry per side. projects is the same list the ring was built
  * from, looked up by index for the front-facing card's labels.
  */
-export function createMeta(refs, params, projects) {
+export function createMeta(
+  refs,
+  params,
+  projects,
+  { simpleMorph = false, reduceMotion = false } = {},
+) {
   const { groups, list, loader, cut, live } = refs;
-  const left = createGroup("left", groups, params);
-  const right = createGroup("right", groups, params);
+  const left = createGroup(
+    "left",
+    groups,
+    params,
+    simpleMorph,
+    reduceMotion,
+  );
+  const right = createGroup(
+    "right",
+    groups,
+    params,
+    simpleMorph,
+    reduceMotion,
+  );
 
   // Only the alpha row does any work; colour passes straight through.
   const setThreshold = () => {

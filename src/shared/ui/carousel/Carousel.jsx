@@ -17,6 +17,7 @@ import { createMeta } from "./ring/meta";
 import { createSplitText } from "./ring/splitText";
 import { createTag, TAG_W, TAG_H } from "./ring/tag";
 import { defaultParams } from "./ring/params";
+import { isAppleTouchDevice } from "./ring/platform";
 import {
   TAU,
   HALF_PI,
@@ -180,6 +181,11 @@ export default function Carousel({ projects, heading, hrefBase }) {
       },
       params,
       projects,
+      {
+        simpleMorph: isAppleTouchDevice(),
+        reduceMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
+          .matches,
+      },
     );
 
     /* ---------------------------------------------------------------- art */
@@ -344,6 +350,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
 
     // Off the events, not a media query, so a hybrid laptop follows actual use.
     let coarse = false;
+    let pointerKind = "mouse";
     let held = false;
     let holdTimer = 0;
 
@@ -364,7 +371,8 @@ export default function Carousel({ projects, heading, hrefBase }) {
     const engaged = () => (coarse ? held : pointer.inside);
 
     const trackPointer = (e) => {
-      coarse = e.pointerType === "touch";
+      pointerKind = e.pointerType || "mouse";
+      coarse = pointerKind === "touch";
       pointer.x = e.clientX - bounds.left - viewW * 0.5;
       pointer.y = viewH * 0.5 - (e.clientY - bounds.top);
       pointer.inside = true;
@@ -446,6 +454,15 @@ export default function Carousel({ projects, heading, hrefBase }) {
       renderer.domElement.releasePointerCapture?.(e.pointerId);
     };
 
+    const onPointerCancel = (e) => {
+      endHold();
+      dragging = false;
+      pointer.inside = false;
+      if (renderer.domElement.hasPointerCapture?.(e.pointerId)) {
+        renderer.domElement.releasePointerCapture?.(e.pointerId);
+      }
+    };
+
     // Navigates when there's an href, else just picks as before.
     const openProject = (projectIndex, planeIndex) => {
       const project = projects[projectIndex];
@@ -468,7 +485,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
     container.addEventListener("pointerdown", onPointerDown);
     container.addEventListener("pointermove", onPointerMove);
     container.addEventListener("pointerup", onPointerUp);
-    container.addEventListener("pointercancel", onPointerUp);
+    container.addEventListener("pointercancel", onPointerCancel);
     container.addEventListener("pointerleave", onPointerLeave);
     container.addEventListener("click", onClick);
 
@@ -575,7 +592,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
     let shown = -1;
     let announced = -1;
     let over = -1;
-    let tagUp = false;
+    let canvasTagUp = false;
 
     const paintList = () => {
       const items = itemsRef.current;
@@ -796,12 +813,33 @@ export default function Carousel({ projects, heading, hrefBase }) {
       }
 
       over = overI;
-      // Both tests, not either: width covers a small window on a mouse, `coarse` a large tablet. Only the grown CTA is reported, since the global cursor already shows its dot. The shader's own tag is never shown, so uTag stays at its scale-0 rest state.
-      const wantTag = over >= 0 && !coarse && viewW > params.tagFrom;
-      if (wantTag !== tagUp) {
-        tagUp = wantTag;
-        setCursorOverrideRef.current?.(wantTag ? "cta" : null);
+      // Mouse uses the global cursor. Direct pointers use the in-canvas tag
+      // below because touch has no cursor and iPadOS does not consistently
+      // advertise Pencil as a hover-capable fine pointer.
+      const wantTag =
+        over >= 0 &&
+        !coarse &&
+        pointerKind !== "pen" &&
+        viewW > params.tagFrom;
+      // Touch has no cursor, while iPadOS does not consistently advertise
+      // Pencil as a hover-capable fine pointer. Reuse the in-canvas tag beside
+      // the contact point: after the deliberate touch hold, or while a pen is
+      // hovering. Mouse keeps the global custom cursor instead.
+      const wantCanvasTag =
+        over >= 0 && ((coarse && held) || pointerKind === "pen");
+      if (wantCanvasTag !== canvasTagUp) {
+        canvasTagUp = wantCanvasTag;
+        tag.show(wantCanvasTag);
       }
+      // On hover-capable pen devices the global cursor is otherwise still a
+      // visible dot beside the canvas tag. Let exactly one cue own the pointer.
+      setCursorOverrideRef.current?.(
+        wantCanvasTag && pointerKind === "pen"
+          ? "hidden"
+          : wantTag
+            ? "cta"
+            : null,
+      );
       // Off the resting centre, so a card being pushed cannot chase its own shadow next frame.
       if (over >= 0) focusPos.copy(rest[over]);
 
@@ -1188,7 +1226,7 @@ export default function Carousel({ projects, heading, hrefBase }) {
       container.removeEventListener("pointerdown", onPointerDown);
       container.removeEventListener("pointermove", onPointerMove);
       container.removeEventListener("pointerup", onPointerUp);
-      container.removeEventListener("pointercancel", onPointerUp);
+      container.removeEventListener("pointercancel", onPointerCancel);
       container.removeEventListener("pointerleave", onPointerLeave);
       container.removeEventListener("click", onClick);
       itemCleanups.forEach((fn) => fn());
