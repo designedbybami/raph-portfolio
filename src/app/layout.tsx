@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Montserrat } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { RevealFooter } from "@/shared/ui/reveal-footer";
 import { CustomCursorProvider } from "@/shared/ui/cursor/custom-cursor";
 import {
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <CustomCursorProvider>
           <RevealFooter>{children}</RevealFooter>
         </CustomCursorProvider>
+        <Analytics />
       </body>
     </html>
   );
