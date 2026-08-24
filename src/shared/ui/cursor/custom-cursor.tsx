@@ -15,6 +15,7 @@ export type CursorVariant = "dot" | "link" | "cta" | "hidden";
 
 // Mounted at the root so the cursor exists everywhere, not per-component.
 const CursorContext = createContext<{
+  enabled: boolean;
   setOverride: (variant: CursorVariant | null) => void;
 } | null>(null);
 
@@ -82,6 +83,11 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
     apply();
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
+  }, []);
+
+  // iOS Safari only simulates :active for a tap if some element in the document already has a touch listener; this unlocks it site-wide with no visible effect.
+  useEffect(() => {
+    document.addEventListener("touchstart", () => {}, { passive: true });
   }, []);
 
   // Snaps instead of easing under reduced motion; the cursor itself stays.
@@ -162,7 +168,7 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
   const color = active ? CTA_COLOR : resolved === "link" ? LINK_COLOR : DOT_COLOR;
 
   return (
-    <CursorContext.Provider value={{ setOverride }}>
+    <CursorContext.Provider value={{ enabled, setOverride }}>
       {children}
 
       {enabled && (

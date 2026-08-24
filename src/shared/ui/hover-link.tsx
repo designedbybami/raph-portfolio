@@ -18,8 +18,13 @@ export function HoverLink({
     <Link
       href={href}
       className={className}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onPointerEnter={() => setHovered(true)}
+      onPointerDown={() => setHovered(true)}
+      onPointerUp={(event) => {
+        if (event.pointerType === "touch") setHovered(false);
+      }}
+      onPointerCancel={() => setHovered(false)}
+      onPointerLeave={() => setHovered(false)}
     >
       {children(hovered)}
     </Link>
@@ -44,8 +49,13 @@ export function HoverAnchor({
       href={href}
       className={className}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onPointerEnter={() => setHovered(true)}
+      onPointerDown={() => setHovered(true)}
+      onPointerUp={(event) => {
+        if (event.pointerType === "touch") setHovered(false);
+      }}
+      onPointerCancel={() => setHovered(false)}
+      onPointerLeave={() => setHovered(false)}
     >
       {children(hovered)}
     </a>

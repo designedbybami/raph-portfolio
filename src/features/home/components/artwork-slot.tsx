@@ -8,6 +8,7 @@ import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { NAV_HANDOFF_MOVE_S, useNavHandoffRegistry } from "@/shared/lib/nav-handoff";
 import { useHydrated } from "@/shared/lib/use-hydrated";
 import { useShaderEnabled } from "@/shared/lib/use-shader-enabled";
+import { useCursor } from "@/shared/ui/cursor/custom-cursor";
 
 // Pulls in Three.js, so it stays out of the initial page bundle.
 const FluidImageReveal = dynamic(
@@ -46,9 +47,11 @@ export function ArtworkSlot({
 }) {
   const [displayedIndex, setDisplayedIndex] = useState(activeIndex);
   const [isHovered, setIsHovered] = useState(false);
+  const [directPointerActive, setDirectPointerActive] = useState(false);
   const isHoveredRef = useRef(false);
   const shaderEnabled = useShaderEnabled();
   const hydrated = useHydrated();
+  const customCursorEnabled = useCursor()?.enabled ?? false;
   const [revealDone, setRevealDone] = useState(false);
 
   useEffect(() => {
@@ -69,9 +72,18 @@ export function ArtworkSlot({
   const tiltX = useSpring(0, { damping: 20, stiffness: 150 });
   const tiltY = useSpring(0, { damping: 20, stiffness: 150 });
 
-  const handlePointerEnter = () => {
+  const handlePointerEnter = (event: PointerEvent<HTMLAnchorElement>) => {
     isHoveredRef.current = true;
     setIsHovered(true);
+    setDirectPointerActive(
+      event.pointerType === "touch" ||
+        (event.pointerType === "pen" && !customCursorEnabled),
+    );
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
+    handlePointerEnter(event);
+    handlePointerMove(event);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLAnchorElement>) => {
@@ -83,8 +95,13 @@ export function ArtworkSlot({
   const handlePointerLeave = () => {
     isHoveredRef.current = false;
     setIsHovered(false);
+    setDirectPointerActive(false);
     tiltX.set(0);
     tiltY.set(0);
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLAnchorElement>) => {
+    if (event.pointerType === "touch") handlePointerLeave();
   };
 
   const activeArtwork = artworks[displayedIndex];
@@ -130,7 +147,10 @@ export function ArtworkSlot({
         className="relative block h-full overflow-hidden"
         style={{ perspective: 800 }}
         onPointerEnter={handlePointerEnter}
+        onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerLeave}
         onPointerLeave={handlePointerLeave}
       >
         {/* Blank (not just covered) until the reveal takes over: without this the plain
@@ -174,6 +194,18 @@ export function ArtworkSlot({
             onUnavailable={() => setRevealDone(true)}
           />
         )}
+
+        {/* The custom cursor's "Open Project" cue never renders on a coarse pointer, so this stands in permanently rather than on hover. */}
+        <motion.span
+          className={`pointer-events-none absolute right-4 bottom-4 z-20 items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm ${directPointerActive ? "flex" : "hidden pointer-coarse:flex"}`}
+          animate={{ scale: isHovered ? 1.06 : 1 }}
+          transition={{ type: "spring", stiffness: 320, damping: 22 }}
+        >
+          Open project
+          <svg aria-hidden viewBox="0 0 24 24" fill="none" className="h-3 w-3">
+            <path d="M7 17 17 7M8 7h9v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.span>
       </Link>
     </motion.div>
   );

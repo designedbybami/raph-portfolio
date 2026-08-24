@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 import { GradualBlur } from "@/shared/ui/gradual-blur";
 import { HoverAnchor } from "@/shared/ui/hover-link";
 import { LetterSwap } from "@/shared/ui/letter-swap";
@@ -20,7 +20,31 @@ const SECTION = "mt-24 sm:mt-32 lg:mt-40";
 const LABEL = "font-body text-[11px] font-medium tracking-[0.22em] text-white/40 uppercase";
 // #2563eb matches the custom cursor's default dot.
 const PILL =
-  "rounded-full border border-white/12 px-4 py-2 text-sm text-white/70 transition-colors duration-300 ease-out hover:border-[#2563eb] hover:bg-[#2563eb] hover:text-white";
+  "rounded-full border border-white/12 px-4 py-2 text-sm text-white/70 transition-colors duration-300 ease-out hover:border-[#2563eb] hover:bg-[#2563eb] hover:text-white active:border-[#2563eb] active:bg-[#2563eb] active:text-white";
+const PILL_ACTIVE = "border-[#2563eb] bg-[#2563eb] text-white";
+
+function InteractivePill({ label }: { label: string }) {
+  const [active, setActive] = useState(false);
+
+  const activatePen = (event: PointerEvent<HTMLLIElement>) => {
+    if (event.pointerType === "pen") setActive(true);
+  };
+
+  return (
+    <li
+      className={`${PILL} ${active ? PILL_ACTIVE : ""}`}
+      onPointerEnter={activatePen}
+      onPointerDown={() => setActive(true)}
+      onPointerUp={(event) => {
+        if (event.pointerType !== "pen") setActive(false);
+      }}
+      onPointerCancel={() => setActive(false)}
+      onPointerLeave={() => setActive(false)}
+    >
+      {label}
+    </li>
+  );
+}
 
 function ArrowIcon({ hovered }: { hovered: boolean }) {
   return (
@@ -163,9 +187,7 @@ export function AboutPage() {
             <p className={LABEL}>What he does</p>
             <ul className="mt-6 flex flex-wrap gap-3">
               {SKILLS.map((skill) => (
-                <li key={skill} className={PILL}>
-                  {skill}
-                </li>
+                <InteractivePill key={skill} label={skill} />
               ))}
             </ul>
           </Reveal>
@@ -174,9 +196,7 @@ export function AboutPage() {
             <p className={LABEL}>Tools</p>
             <ul className="mt-6 flex flex-wrap gap-3">
               {TOOLS.map((tool) => (
-                <li key={tool} className={PILL}>
-                  {tool}
-                </li>
+                <InteractivePill key={tool} label={tool} />
               ))}
             </ul>
           </Reveal>
