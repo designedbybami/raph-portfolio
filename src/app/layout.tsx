@@ -87,6 +87,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${biggerDisplay.variable} ${montserrat.variable} h-full antialiased`}
     >
       <body className="h-dvh overflow-hidden bg-black">
+        {/* eslint-disable-next-line react/no-danger -- static text, no user input; JSX can't emit a literal HTML comment any other way */}
+        <div
+          style={{ display: "none" }}
+          dangerouslySetInnerHTML={{
+            __html: `<!--
+      ───────────────────────────────────────────────
+      Designed & Developed: DesignedbyBami
+      Portfolio : https://bamiboy.com
+      Twitter   : https://twitter.com/bamiboy_
+      LinkedIn  : https://www.linkedin.com/in/akinade-boluwatife/
+      ───────────────────────────────────────────────
+    -->`,
+          }}
+        />
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger -- static, no user input
