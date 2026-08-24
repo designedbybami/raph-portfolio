@@ -8,7 +8,6 @@ import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { NAV_HANDOFF_MOVE_S, useNavHandoffRegistry } from "@/shared/lib/nav-handoff";
 import { useHydrated } from "@/shared/lib/use-hydrated";
 import { useShaderEnabled } from "@/shared/lib/use-shader-enabled";
-import { useCursor } from "@/shared/ui/cursor/custom-cursor";
 
 // Pulls in Three.js, so it stays out of the initial page bundle.
 const FluidImageReveal = dynamic(
@@ -51,7 +50,6 @@ export function ArtworkSlot({
   const isHoveredRef = useRef(false);
   const shaderEnabled = useShaderEnabled();
   const hydrated = useHydrated();
-  const customCursorEnabled = useCursor()?.enabled ?? false;
   const [revealDone, setRevealDone] = useState(false);
 
   useEffect(() => {
@@ -75,10 +73,7 @@ export function ArtworkSlot({
   const handlePointerEnter = (event: PointerEvent<HTMLAnchorElement>) => {
     isHoveredRef.current = true;
     setIsHovered(true);
-    setDirectPointerActive(
-      event.pointerType === "touch" ||
-        (event.pointerType === "pen" && !customCursorEnabled),
-    );
+    setDirectPointerActive(event.pointerType === "touch");
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
@@ -195,9 +190,10 @@ export function ArtworkSlot({
           />
         )}
 
-        {/* The custom cursor's "Open Project" cue never renders on a coarse pointer, so this stands in permanently rather than on hover. */}
+        {/* Phones keep a persistent cue. Tablet touch shows it while pressed,
+            while Pencil uses the shared moving white cursor CTA. */}
         <motion.span
-          className={`pointer-events-none absolute right-4 bottom-4 z-20 items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm ${directPointerActive ? "flex" : "hidden pointer-coarse:flex"}`}
+          className={`pointer-events-none absolute right-4 bottom-4 z-20 items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm ${directPointerActive ? "flex" : "flex sm:hidden"}`}
           animate={{ scale: isHovered ? 1.06 : 1 }}
           transition={{ type: "spring", stiffness: 320, damping: 22 }}
         >

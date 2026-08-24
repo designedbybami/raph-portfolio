@@ -41,7 +41,8 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
   const springX = useSpring(x, { damping: 30, stiffness: 700, mass: 0.35 });
   const springY = useSpring(y, { damping: 30, stiffness: 700, mass: 0.35 });
 
-  const [enabled, setEnabled] = useState(false);
+  const [finePointer, setFinePointer] = useState(false);
+  const [penActive, setPenActive] = useState(false);
   const [visible, setVisible] = useState(false);
   const [variant, setVariant] = useState<CursorVariant>("dot");
   const [reduced, setReduced] = useState(false);
@@ -79,11 +80,13 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
   // `pointer: fine` is the honest test for this, not screen width.
   useEffect(() => {
     const query = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const apply = () => setEnabled(query.matches);
+    const apply = () => setFinePointer(query.matches);
     apply();
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
   }, []);
+
+  const enabled = finePointer || penActive;
 
   // iOS Safari only simulates :active for a tap if some element in the document already has a touch listener; this unlocks it site-wide with no visible effect.
   useEffect(() => {
@@ -124,9 +127,14 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) return;
-
     const onMove = (event: PointerEvent) => {
+      const pen = event.pointerType === "pen";
+      setPenActive(pen);
+      if (!finePointer && !pen) {
+        setVisible(false);
+        return;
+      }
+
       x.set(event.clientX);
       y.set(event.clientY);
       lastPointRef.current = { x: event.clientX, y: event.clientY };
@@ -159,7 +167,7 @@ export function CustomCursorProvider({ children }: { children: React.ReactNode }
       window.removeEventListener("pointerout", onOut);
       window.removeEventListener("blur", onBlur);
     };
-  }, [enabled, x, y]);
+  }, [finePointer, x, y]);
 
   const resolved = override ?? variant;
   const active = resolved === "cta";
