@@ -184,7 +184,7 @@ export function createMeta(
   };
 
   // Band state is passed in, not read, so this stays a pure function of it.
-  const style = ({ textK, tight, viewW }) => {
+  const style = ({ textK, tight }) => {
     // Everything downstream derives from this: box height, filter region, offset.
     const bigVw = params.nameSize * textK * (tight ? params.tightName : 1);
     const big = `${bigVw}vw`;
@@ -206,24 +206,25 @@ export function createMeta(
       const isRight = side === "right";
 
       // No room for two lockups in the tight band, so only the name survives.
-      const corner = tight && !isRight;
-      if (tight && isRight) {
-        g.box.style.display = "none";
-        continue;
-      }
+      const mobileTitle = tight && !isRight;
+      const mobileYear = tight && isRight;
       g.box.style.display = "";
 
-      g.box.style.width = `${corner ? params.tightMetaWidth : params.metaWidth}vw`; // prettier-ignore
+      g.box.style.width = `${mobileTitle ? 100 : mobileYear ? params.tightMetaWidth : params.metaWidth}vw`; // prettier-ignore
       g.box.style.height = `${h}vw`;
+      g.box.style.zIndex = mobileTitle ? "0" : "20";
 
-      if (corner) {
-        // The box is 3x the type's height, so drop it by the difference or the words sit half a box high.
-        const boxPx = (h * viewW) / 100;
-        const emPx = (bigVw * viewW) / 100;
+      if (mobileTitle) {
+        g.box.style.top = "50%";
+        g.box.style.left = "50%";
+        g.box.style.right = "auto";
+        g.box.style.bottom = "auto";
+        g.box.style.transform = "translate(-50%, -50%)";
+      } else if (mobileYear) {
         g.box.style.top = "auto";
         g.box.style.left = "auto";
         g.box.style.right = `${params.tightNameRight}px`;
-        g.box.style.bottom = `${params.tightNameBottom + emPx * 0.5 - boxPx * 0.5}px`;
+        g.box.style.bottom = `${params.tightNameBottom}px`;
         g.box.style.transform = "none";
       } else if (isRight) {
         // Bottom-anchored, or a long title column runs into this lockup.
@@ -245,13 +246,16 @@ export function createMeta(
       // All three rows must agree exactly or a word jumps between them.
       for (const layer of [...g.layers, g.plain]) {
         if (!layer) continue;
-        layer.style.justifyContent =
-          corner || isRight ? "flex-end" : "flex-start";
+        layer.style.justifyContent = mobileTitle
+          ? "center"
+          : isRight
+            ? "flex-end"
+            : "flex-start";
         const row = layer.firstElementChild;
         row.style.gap = `${isRight ? params.metaGapR : params.metaGapL}vw`;
         const [lead, trail] = row.children;
         // The left lead slot's index number is no longer shown; its morph still runs underneath, so nothing needs resyncing.
-        lead.style.display = corner || !isRight ? "none" : "";
+        lead.style.display = tight || !isRight ? "none" : "";
         // lead: the category (right, paragraph font, bold) or the hidden index number (left, paragraph font, normal weight).
         lead.style.fontFamily = paragraphFace;
         lead.style.fontSize = isRight ? category : small;
