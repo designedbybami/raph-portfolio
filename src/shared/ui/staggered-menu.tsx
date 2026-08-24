@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useHydrated } from "@/shared/lib/use-hydrated";
 import "./staggered-menu.css";
 
 export interface StaggeredMenuItem {
@@ -55,11 +56,9 @@ export function StaggeredMenu({
   const [textLines, setTextLines] = useState(["Menu", "Close"]);
 
   // Portals to body: an ancestor's transform (motion.div wrappers etc.) would hijack position:fixed.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
-  const closeTweenRef = useRef<gsap.core.Tween | null>(null);
   const spinTweenRef = useRef<gsap.core.Tween | null>(null);
   const textCycleAnimRef = useRef<gsap.core.Tween | null>(null);
   const busyRef = useRef(false);
@@ -95,8 +94,6 @@ export function StaggeredMenu({
     if (!panel) return null;
 
     openTlRef.current?.kill();
-    closeTweenRef.current?.kill();
-    closeTweenRef.current = null;
 
     const itemEls = Array.from(panel.querySelectorAll<HTMLElement>(".sm-panel-itemLabel"));
     const numberEls = Array.from(panel.querySelectorAll<HTMLElement>(".sm-panel-list[data-numbering] .sm-panel-item"));
@@ -161,10 +158,23 @@ export function StaggeredMenu({
   }, [position]);
 
   const playOpen = useCallback(() => {
+    const activeTimeline = openTlRef.current;
+    // A close may still be reversing the open timeline. Turning that same
+    // timeline around preserves its current position and keeps panel state in
+    // sync with the newly-open React state.
+    if (busyRef.current && activeTimeline) {
+      activeTimeline.eventCallback("onReverseComplete", null);
+      activeTimeline.eventCallback("onComplete", () => {
+        busyRef.current = false;
+      });
+      activeTimeline.play();
+      return;
+    }
     if (busyRef.current) return;
     busyRef.current = true;
     const tl = buildOpenTimeline();
     if (tl) {
+      tl.eventCallback("onReverseComplete", null);
       tl.eventCallback("onComplete", () => {
         busyRef.current = false;
       });
@@ -174,34 +184,17 @@ export function StaggeredMenu({
     }
   }, [buildOpenTimeline]);
 
+  // Reverses the exact open timeline rather than a separate tween, so closing is always the literal mirror of opening, item-by-item, not just the panel sliding out.
   const playClose = useCallback(() => {
-    openTlRef.current?.kill();
-    openTlRef.current = null;
-
-    const panel = panelRef.current;
-    const layers = preLayerElsRef.current;
-    if (!panel) return;
-
-    const offscreen = position === "left" ? -100 : 100;
-    closeTweenRef.current?.kill();
-    closeTweenRef.current = gsap.to([...layers, panel], {
-      xPercent: offscreen,
-      duration: 0.32,
-      ease: "power3.in",
-      overwrite: "auto",
-      onComplete: () => {
-        const itemEls = Array.from(panel.querySelectorAll<HTMLElement>(".sm-panel-itemLabel"));
-        if (itemEls.length) gsap.set(itemEls, { yPercent: 140, rotate: 10 });
-        const numberEls = Array.from(panel.querySelectorAll<HTMLElement>(".sm-panel-list[data-numbering] .sm-panel-item"));
-        if (numberEls.length) gsap.set(numberEls, { "--sm-num-opacity": 0 });
-        const socialTitle = panel.querySelector<HTMLElement>(".sm-socials-title");
-        const socialLinks = Array.from(panel.querySelectorAll<HTMLElement>(".sm-socials-link"));
-        if (socialTitle) gsap.set(socialTitle, { opacity: 0 });
-        if (socialLinks.length) gsap.set(socialLinks, { y: 25, opacity: 0 });
-        busyRef.current = false;
-      },
+    const tl = openTlRef.current;
+    if (!tl) return;
+    busyRef.current = true;
+    tl.eventCallback("onComplete", null);
+    tl.eventCallback("onReverseComplete", () => {
+      busyRef.current = false;
     });
-  }, [position]);
+    tl.reverse();
+  }, []);
 
   const animateIcon = useCallback((opening: boolean) => {
     const icon = iconRef.current;
@@ -292,6 +285,19 @@ export function StaggeredMenu({
         className="sm-panel flex flex-col overflow-y-auto bg-black px-6 pt-24 pb-8 text-white"
         aria-hidden={!open}
       >
+        <button
+          type="button"
+          onClick={closeMenu}
+          aria-label="Close menu"
+          tabIndex={open ? 0 : -1}
+          className="absolute top-6 right-6 flex h-10 w-10 items-center justify-center text-white transition-colors hover:text-[var(--sm-accent)]"
+        >
+          <span className="sm-icon">
+            <span className="sm-icon-line" style={{ rotate: "45deg" }} />
+            <span className="sm-icon-line" style={{ rotate: "-45deg" }} />
+          </span>
+        </button>
+
         <ul className="flex flex-col gap-3" role="list" data-numbering={displayItemNumbering || undefined}>
           {items.map((item, idx) =>
             item.link && !item.disabled ? (
