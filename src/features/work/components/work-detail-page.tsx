@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { type PointerEvent, useState } from "react";
 import { GradualBlur } from "@/shared/ui/gradual-blur";
 import { HoverLink } from "@/shared/ui/hover-link";
 import { LetterSwap } from "@/shared/ui/letter-swap";
@@ -58,6 +59,58 @@ function NavThumb({ item, hovered }: { item: WorkNavItem; hovered: boolean }) {
         className={`h-full w-full object-cover transition-transform duration-500 ease-out ${hovered ? "scale-110" : "scale-100"}`}
       />
     </span>
+  );
+}
+
+function GalleryImage({
+  src,
+  alt,
+  width,
+  height,
+  blurDataURL,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  blurDataURL?: string;
+}) {
+  const [active, setActive] = useState(false);
+
+  const handlePointerEnter = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") setActive(true);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "pen") setActive(true);
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") setActive(false);
+  };
+
+  return (
+    <div
+      className="overflow-hidden rounded-2xl sm:rounded-3xl"
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerMove}
+      onPointerDown={() => setActive(true)}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => setActive(false)}
+      onPointerLeave={() => setActive(false)}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        unoptimized
+        placeholder={blurDataURL ? "blur" : "empty"}
+        blurDataURL={blurDataURL}
+        sizes="(max-width: 639px) 100vw, 50vw"
+        className={`w-full transition-transform duration-700 ease-out motion-reduce:transition-none ${active ? "scale-110" : "scale-100"}`}
+      />
+    </div>
   );
 }
 
@@ -168,17 +221,16 @@ export function WorkDetailPage({
                 const dimensions = item.meta?.dimensions ?? FALLBACK_RATIO;
 
                 return (
-                  <Reveal key={item._key} className="group mb-4 overflow-hidden rounded-2xl break-inside-avoid sm:mb-6 sm:rounded-3xl lg:mb-8">
-                    <Image
+                  <Reveal
+                    key={item._key}
+                    className="mb-4 break-inside-avoid sm:mb-6 lg:mb-8"
+                  >
+                    <GalleryImage
                       src={urlFor(item).width(1000).auto("format").url()}
                       alt={item.alt ?? `${work.title}, detail ${index + 1}`}
                       width={dimensions.width}
                       height={dimensions.height}
-                      unoptimized
-                      placeholder={item.meta?.lqip ? "blur" : "empty"}
                       blurDataURL={item.meta?.lqip ?? undefined}
-                      sizes="(max-width: 639px) 100vw, 50vw"
-                      className="w-full transition-transform duration-700 ease-out group-hover:scale-110"
                     />
                   </Reveal>
                 );
