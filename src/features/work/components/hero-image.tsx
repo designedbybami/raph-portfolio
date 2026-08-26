@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image, { type ImageProps } from "next/image";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { useCursor } from "@/shared/ui/cursor/custom-cursor";
+import { playHoverCue } from "@/shared/lib/sfx";
 import { useShaderEnabled } from "@/shared/lib/use-shader-enabled";
 
 const HeroShaderOverlay = dynamic(
@@ -54,6 +55,8 @@ export function HeroImage({ src, alt, className, ...imgProps }: ImageProps & { s
     setCenter(centerFromEvent(event));
     // The lens is standing in for the pointer here; the dot would double up on it.
     cursor?.setOverride("hidden");
+    // `focus`, not `hover`: the cue is the lens engaging, so it stays silent wherever the lens itself cannot run.
+    if (enabled && !unavailable) playHoverCue("focus");
   };
 
   const handlePointerLeave = () => {

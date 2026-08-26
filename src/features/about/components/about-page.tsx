@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState, type PointerEvent } from "react";
+import { playHoverCue } from "@/shared/lib/sfx";
 import { GradualBlur } from "@/shared/ui/gradual-blur";
 import { HoverAnchor } from "@/shared/ui/hover-link";
 import { LetterSwap } from "@/shared/ui/letter-swap";
@@ -28,6 +29,8 @@ function InteractivePill({ label }: { label: string }) {
 
   const activatePen = (event: PointerEvent<HTMLLIElement>) => {
     if (event.pointerType === "pen") setActive(true);
+    // Cooldown-throttled inside playHoverCue: twelve of these sit in one row.
+    playHoverCue();
   };
 
   return (

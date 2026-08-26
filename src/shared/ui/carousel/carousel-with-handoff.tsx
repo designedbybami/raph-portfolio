@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { playAmbientCue, playCue } from "@/shared/lib/sfx";
+import { useHaptics } from "@/shared/lib/use-haptics";
 
 import Carousel from "./Carousel";
 
@@ -24,7 +26,22 @@ export function CarouselWithHandoff({
   hrefBase?: string;
 }) {
   const [entryComplete, setEntryComplete] = useState(false);
-  const showGuidance = useCallback(() => setEntryComplete(true), []);
+  const { tap, springSettle } = useHaptics();
+  const showGuidance = useCallback(() => {
+    setEntryComplete(true);
+    springSettle();
+    playAmbientCue("snap");
+  }, [springSettle]);
+
+  const handleSpreadStart = useCallback(() => playAmbientCue("expand"), []);
+
+  const handleTap = useCallback(
+    (isTouch: boolean) => {
+      if (isTouch) tap();
+      playCue("open");
+    },
+    [tap],
+  );
 
   const guidanceWord = (word: string, index: number) => (
     <span
@@ -49,6 +66,8 @@ export function CarouselWithHandoff({
         heading={heading}
         hrefBase={hrefBase}
         onEntryComplete={showGuidance}
+        onSpreadStart={handleSpreadStart}
+        onTap={handleTap}
       />
 
       <div

@@ -8,6 +8,8 @@ import { LetterSwap } from "@/shared/ui/letter-swap";
 import { Reveal } from "@/shared/ui/reveal";
 import { RevealParagraphs } from "@/shared/ui/reveal-words";
 import { SiteHeader } from "@/shared/ui/site-header";
+import { playCue, playHoverCue } from "@/shared/lib/sfx";
+import { useHaptics } from "@/shared/lib/use-haptics";
 import { urlFor } from "@/sanity/lib/image";
 import { HeroImage } from "./hero-image";
 import type { WorkDetail, WorkNavItem } from "../data/queries";
@@ -131,6 +133,7 @@ export function WorkDetailPage({
   const gallery = (work.gallery ?? []).filter((item) => item.asset);
   const paragraphs = paragraphsOf(work.about);
   const showNav = prev && next && prev.slug !== work.slug;
+  const { select } = useHaptics();
 
   return (
     <div className="bg-black text-white">
@@ -242,7 +245,13 @@ export function WorkDetailPage({
         {showNav && (
           <section className={`${SECTION} flex items-center justify-between gap-6 border-t border-white/10 pt-10`}>
             <Reveal>
-              <HoverLink href={`${basePath}/${prev.slug}`} className="inline-block">
+              <HoverLink
+                href={`${basePath}/${prev.slug}`}
+                className="inline-block"
+                onTapStart={select}
+                onHoverStart={playHoverCue}
+                onActivate={() => playCue("back")}
+              >
                 {(hovered) => (
                   <span
                     className={`flex items-center gap-4 transition-transform duration-300 ease-out ${hovered ? "-translate-x-1" : ""}`}
@@ -256,7 +265,13 @@ export function WorkDetailPage({
             </Reveal>
 
             <Reveal delay={0.05}>
-              <HoverLink href={`${basePath}/${next.slug}`} className="inline-block text-right">
+              <HoverLink
+                href={`${basePath}/${next.slug}`}
+                className="inline-block text-right"
+                onTapStart={select}
+                onHoverStart={playHoverCue}
+                onActivate={() => playCue("forward")}
+              >
                 {(hovered) => (
                   <span
                     className={`flex items-center gap-4 transition-transform duration-300 ease-out ${hovered ? "translate-x-1" : ""}`}

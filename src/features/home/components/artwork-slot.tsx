@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { NAV_HANDOFF_MOVE_S, useNavHandoffRegistry } from "@/shared/lib/nav-handoff";
+import { playCue, playHoverCue } from "@/shared/lib/sfx";
+import { useHaptics } from "@/shared/lib/use-haptics";
 import { useHydrated } from "@/shared/lib/use-hydrated";
 import { useShaderEnabled } from "@/shared/lib/use-shader-enabled";
 
@@ -69,16 +71,19 @@ export function ArtworkSlot({
 
   const tiltX = useSpring(0, { damping: 20, stiffness: 150 });
   const tiltY = useSpring(0, { damping: 20, stiffness: 150 });
+  const { tap } = useHaptics();
 
   const handlePointerEnter = (event: PointerEvent<HTMLAnchorElement>) => {
     isHoveredRef.current = true;
     setIsHovered(true);
     setDirectPointerActive(event.pointerType === "touch");
+    playHoverCue();
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
     handlePointerEnter(event);
     handlePointerMove(event);
+    if (event.pointerType === "touch") tap();
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLAnchorElement>) => {
@@ -141,6 +146,7 @@ export function ArtworkSlot({
         data-cursor="cta"
         className="relative block h-full overflow-hidden"
         style={{ perspective: 800 }}
+        onClick={() => playCue("open")}
         onPointerEnter={handlePointerEnter}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

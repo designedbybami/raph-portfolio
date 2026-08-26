@@ -7,10 +7,18 @@ import { useState, type ReactNode } from "react";
 export function HoverLink({
   href,
   className,
+  onTapStart,
+  onHoverStart,
+  onActivate,
   children,
 }: {
   href: string;
   className?: string;
+  // Fires once, on touch-down specifically, e.g. for haptics. Not fired for mouse.
+  onTapStart?: () => void;
+  onHoverStart?: () => void;
+  // Fires on activation by any pointer kind, unlike onTapStart.
+  onActivate?: () => void;
   children: (hovered: boolean) => ReactNode;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -18,8 +26,15 @@ export function HoverLink({
     <Link
       href={href}
       className={className}
-      onPointerEnter={() => setHovered(true)}
-      onPointerDown={() => setHovered(true)}
+      onClick={onActivate}
+      onPointerEnter={() => {
+        setHovered(true);
+        onHoverStart?.();
+      }}
+      onPointerDown={(event) => {
+        setHovered(true);
+        if (event.pointerType === "touch") onTapStart?.();
+      }}
       onPointerUp={(event) => {
         if (event.pointerType === "touch") setHovered(false);
       }}

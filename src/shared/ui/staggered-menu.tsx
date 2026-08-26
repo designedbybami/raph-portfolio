@@ -4,6 +4,8 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { playAmbientCue } from "@/shared/lib/sfx";
+import { useHaptics } from "@/shared/lib/use-haptics";
 import { useHydrated } from "@/shared/lib/use-hydrated";
 import "./staggered-menu.css";
 
@@ -58,6 +60,7 @@ export function StaggeredMenu({
   // Portals to body: an ancestor's transform (motion.div wrappers etc.) would hijack position:fixed.
   const mounted = useHydrated();
 
+  const { tap, menuSnap } = useHaptics();
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const spinTweenRef = useRef<gsap.core.Tween | null>(null);
   const textCycleAnimRef = useRef<gsap.core.Tween | null>(null);
@@ -166,6 +169,8 @@ export function StaggeredMenu({
       activeTimeline.eventCallback("onReverseComplete", null);
       activeTimeline.eventCallback("onComplete", () => {
         busyRef.current = false;
+        menuSnap();
+        playAmbientCue("open");
       });
       activeTimeline.play();
       return;
@@ -177,12 +182,14 @@ export function StaggeredMenu({
       tl.eventCallback("onReverseComplete", null);
       tl.eventCallback("onComplete", () => {
         busyRef.current = false;
+        menuSnap();
+        playAmbientCue("open");
       });
       tl.play(0);
     } else {
       busyRef.current = false;
     }
-  }, [buildOpenTimeline]);
+  }, [buildOpenTimeline, menuSnap]);
 
   // Reverses the exact open timeline rather than a separate tween, so closing is always the literal mirror of opening, item-by-item, not just the panel sliding out.
   const playClose = useCallback(() => {
@@ -192,9 +199,11 @@ export function StaggeredMenu({
     tl.eventCallback("onComplete", null);
     tl.eventCallback("onReverseComplete", () => {
       busyRef.current = false;
+      menuSnap();
+      playAmbientCue("close");
     });
     tl.reverse();
-  }, []);
+  }, [menuSnap]);
 
   const animateIcon = useCallback((opening: boolean) => {
     const icon = iconRef.current;
@@ -232,6 +241,7 @@ export function StaggeredMenu({
     });
   }, []);
 
+  // No press-time tap here: the payoff is menuSnap firing once the panel actually lands, inside playOpen/playClose.
   const toggleMenu = useCallback(() => {
     const target = !openRef.current;
     openRef.current = target;
@@ -242,6 +252,7 @@ export function StaggeredMenu({
     animateText(target);
   }, [playOpen, playClose, animateIcon, animateText]);
 
+  // Plain state change, no haptic: also used by click-outside, which is a passive dismissal, not a deliberate tap.
   const closeMenu = useCallback(() => {
     if (!openRef.current) return;
     openRef.current = false;
@@ -250,6 +261,11 @@ export function StaggeredMenu({
     animateIcon(false);
     animateText(false);
   }, [playClose, animateIcon, animateText]);
+
+  const closeMenuWithTap = useCallback(() => {
+    tap();
+    closeMenu();
+  }, [tap, closeMenu]);
 
   useLayoutEffect(() => {
     if (!closeOnClickAway || !open) return;
@@ -306,7 +322,7 @@ export function StaggeredMenu({
                   href={item.link}
                   aria-label={item.ariaLabel}
                   data-index={idx + 1}
-                  onClick={closeMenu}
+                  onClick={closeMenuWithTap}
                   className="sm-panel-item relative inline-block pr-12 font-heading text-6xl leading-none transition-colors hover:text-[var(--sm-accent)]"
                 >
                   <span className="sm-panel-itemLabel">{item.label}</span>

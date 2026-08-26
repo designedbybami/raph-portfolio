@@ -45,6 +45,8 @@ export default function Carousel({
   heading,
   hrefBase,
   onEntryComplete,
+  onSpreadStart,
+  onTap,
 }) {
   const router = useRouter();
   const containerRef = useRef(null);
@@ -65,11 +67,15 @@ export default function Carousel({
   const hrefBaseRef = useRef(hrefBase);
   const routerRef = useRef(router);
   const onEntryCompleteRef = useRef(onEntryComplete);
+  const onSpreadStartRef = useRef(onSpreadStart);
+  const onTapRef = useRef(onTap);
   useInsertionEffect(() => {
     setCursorOverrideRef.current = cursor?.setOverride ?? null;
     hrefBaseRef.current = hrefBase;
     routerRef.current = router;
     onEntryCompleteRef.current = onEntryComplete;
+    onSpreadStartRef.current = onSpreadStart;
+    onTapRef.current = onTap;
   });
 
   useEffect(() => {
@@ -474,6 +480,8 @@ export default function Carousel({
       const project = projects[projectIndex];
       const href = project?.slug && hrefBaseRef.current ? `${hrefBaseRef.current}/${project.slug}` : undefined;
       if (href) {
+        // Sound wants every pointer kind, haptics only touch, so hand over which it was rather than gating here.
+        onTapRef.current?.(coarse);
         routerRef.current.push(href);
         return;
       }
@@ -1023,7 +1031,13 @@ export default function Carousel({
       const spreadStart = tl.duration() - 0.15;
       tl.to(
         state,
-        { spread: 1, duration: params.spreadTime, ease: params.spreadEase },
+        {
+          spread: 1,
+          duration: params.spreadTime,
+          ease: params.spreadEase,
+          // The moment the cards peel off the seed, which is a separate beat from the ring landing at rest.
+          onStart: () => onSpreadStartRef.current?.(),
+        },
         spreadStart,
       );
 
