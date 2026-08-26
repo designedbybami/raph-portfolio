@@ -85,7 +85,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${biggerDisplay.variable} ${montserrat.variable} h-full antialiased`}
+      className={`${biggerDisplay.variable} ${montserrat.variable} h-full overflow-x-hidden antialiased`}
     >
       <body className="h-dvh overflow-hidden bg-black">
         {/* eslint-disable-next-line react/no-danger -- static text, no user input; JSX can't emit a literal HTML comment any other way */}
