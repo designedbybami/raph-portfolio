@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -21,7 +21,9 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shaders": "^3.1.457",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "uisfx": "^0.4.0",
+    "web-haptics": "^0.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
